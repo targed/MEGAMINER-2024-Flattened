@@ -30,7 +30,7 @@ class AI(BaseAI):
             str: The name of your Player.
         """
         # <<-- Creer-Merge: get-name -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
-        return "Magomachy Python Player" # REPLACE THIS WITH YOUR TEAM NAME
+        return "Targed" # REPLACE THIS WITH YOUR TEAM NAME
         # <<-- /Creer-Merge: get-name -->>
 
     def start(self) -> None:
@@ -191,6 +191,67 @@ class AI(BaseAI):
                 print("Command not recognized, try again")
         # <<-- Creer-Merge: runTurn -->> - Code you add between this comment and the end comment will be preserved between Creer re-runs.
         # Put your game logic here for runTurn
+        self.player.choose_wizard("aggressive")
+        def reward(action):
+            wizard = self.player.wizard
+            opponent = self.player.opponent.wizard
+
+            if action[0] == 'move':
+                # Reward getting closer to the opponent
+                new_tile = action[1]
+                distance = abs(new_tile.x - opponent.tile.x) + abs(new_tile.y - opponent.tile.y)
+                return -distance
+            elif action[0] == 'cast':
+                spell = action[1]
+                # Reward higher damage spells
+                spell_damage = {
+                    'Fire Slash': 3,
+                    'Thunderous Dash': 0,
+                    'Furious Telekinesis': 0,
+                    'Punch': 1
+                }
+                return spell_damage.get(spell, 0) * 10
+            else:
+                return 0
+
+        wizard = self.player.wizard
+        opponent = self.player.opponent.wizard
+
+        actions = []
+
+        # Possible moves
+        if wizard.movement_left > 0:
+            for tile in wizard.tile.get_neighbors():
+                if tile.type == 'floor' and not tile.wizard:
+                    actions.append(('move', tile))
+
+        # Possible spells
+        if not wizard.has_cast:
+            if wizard.aether >= 2:
+                actions.append(('cast', 'Fire Slash', opponent.tile))
+            if wizard.aether >= 3:
+                actions.append(('cast', 'Thunderous Dash', wizard.tile))
+            if wizard.aether >= 4:
+                actions.append(('cast', 'Furious Telekinesis', opponent.tile))
+            actions.append(('cast', 'Punch', opponent.tile))
+
+        # Choose the best action
+        best_action = None
+        best_reward = float('-inf')
+        for action in actions:
+            r = reward(action)
+            if r > best_reward:
+                best_reward = r
+                best_action = action
+
+        # Execute the best action
+        if best_action:
+            if best_action[0] == 'move':
+                wizard.move(best_action[1])
+            elif best_action[0] == 'cast':
+                wizard.cast(best_action[1], best_action[2])
+        
+        
         return True
         # <<-- /Creer-Merge: runTurn -->>
 
